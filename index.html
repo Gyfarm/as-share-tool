@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>어썸공대 분배금 계산기 v17</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#000;
+    --card:#111;
+    --border:#444;
+    --accent:#4fd1c5;
+  }
+  body{
+    background:var(--bg);
+    color:#fff;
+    font-family:system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    padding:16px;
+    margin:0;
+  }
+  h1{font-size:1.4rem;margin-bottom:12px}
+  h2{font-size:1.1rem;margin:0 0 8px}
+  .layout{
+    display:grid;
+    grid-template-columns:1.1fr 1.4fr;
+    gap:16px;
+  }
+  .card{
+    background:var(--card);
+    padding:12px 14px;
+    border-radius:12px;
+    margin-bottom:12px;
+    border:1px solid rgba(255,255,255,0.06);
+  }
+  label{
+    font-size:0.8rem;
+    margin-right:6px;
+  }
+  input{
+    margin:4px 6px 4px 0;
+    padding:6px 8px;
+    background:#111;
+    color:#fff;
+    border:1px solid var(--border);
+    border-radius:6px;
+    font-size:0.85rem;
+  }
+  input[type="number"]{
+    width:88px;
+  }
+  .row-block{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:4px;
+  }
+  button{
+    margin:4px 4px 4px 0;
+    padding:6px 10px;
+    background:#222;
+    color:#fff;
+    border:1px solid var(--border);
+    border-radius:999px;
+    cursor:pointer;
+    font-size:0.8rem;
+  }
+  button:hover{background:#333}
+  .btn-primary{
+    border-color:var(--accent);
+  }
+  .btn-danger{
+    border-color:#f56565;
+    color:#fed7d7;
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:8px;
+    font-size:0.8rem;
+  }
+  th,td{
+    border:1px solid var(--border);
+    padding:4px 6px;
+    text-align:center;
+  }
+  th{background:#181818}
+  .amt-neg{color:#ff6b6b}
+  .amt-pos{color:#9ae6b4}
+  .item-list{
+    text-align:left;
+    margin-bottom:8px;
+    font-size:0.85rem;
+  }
+  #status{
+    font-size:0.8rem;
+    margin-top:4px;
+    color:#cbd5f5;
+  }
+  .badge{
+    display:inline-block;
+    padding:2px 8px;
+    font-size:0.7rem;
+    border-radius:999px;
+    border:1px solid var(--border);
+    margin-left:4px;
+  }
+  .badge-admin{border-color:var(--accent);color:var(--accent);}
+  .admin-only{
+    opacity:0.45;
+    pointer-events:none;
+  }
+  .admin-only.active{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .session-list{
+    list-style:none;
+    padding:0;
+    margin:4px 0 0;
+    max-height:120px;
+    overflow:auto;
+    font-size:0.8rem;
+  }
+  .session-list li{
+    padding:4px 6px;
+    border-radius:6px;
+    border:1px solid transparent;
+    cursor:pointer;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .session-list li:hover{
+    background:#1f2933;
+    border-color:var(--border);
+  }
+  .session-list time{
+    opacity:0.7;
+    font-size:0.7rem;
+  }
+  .hint{
+    font-size:0.75rem;
+    opacity:0.75;
+    margin-top:2px;
+  }
+  @media (max-width: 768px){
+    body{padding:10px}
+    .layout{
+      display:block;
+    }
+    .card{margin-bottom:10px}
+    input{width:100%;max-width:100%;box-sizing:border-box;margin:3px 0;}
+    input[type="number"]{width:100%;max-width:100%;}
+    .row-block{flex-direction:column;align-items:flex-start}
+    button{width:auto}
+  }
+</style>
+</head>
+<body>
+<h1>어썸공대 분배금 계산기 v17</h1>
+
+<div class="card" aria-label="로그인 영역">
+  <h2>로그인 / 권한</h2>
+  <div class="row-block">
+    <label for="email">이메일</label>
+    <input id="email" type="email" autocomplete="email">
+    <label for="password">비밀번호</label>
+    <input id="password" type="password" autocomplete="current-password">
+  </div>
+  <div class="row-block">
+    <button class="btn-primary" onclick="signUp()">회원가입</button>
+    <button class="btn-primary" onclick="signIn()">로그인</button>
+    <button onclick="signOut()">로그아웃</button>
+    <span id="roleBadge" class="badge">게스트</span>
+  </div>
+  <div id="status">상태: 로그아웃됨</div>
+  <div class="hint">* 관리자 이메일(hgy0018@naver.com)로 로그인하면 저장/관리 기능이 열립니다.</div>
+</div>
+
+<div class="card admin-only" id="adminPanel" aria-label="관리자 패널">
+  <h2>관리자 패널 <span class="badge badge-admin">ADMIN</span></h2>
+  <div class="row-block">
+    <label for="sessionId">세션 ID</label>
+    <input id="sessionId" placeholder="예: sm_2025_01">
+    <button class="btn-primary" onclick="saveSession()">이 ID로 저장</button>
+    <button onclick="loadSession()">이 ID 불러오기</button>
+    <button onclick="loadSessionList()">목록 새로고침</button>
+  </div>
+  <div class="hint">* 다른 레이드/파티별로 세션 ID를 다르게 저장해두고 불러올 수 있습니다.</div>
+  <ul id="sessionList" class="session-list" aria-label="저장된 세션 목록"></ul>
+</div>
+
+<div class="layout" aria-label="입력 및 결과 영역">
+  <div>
+    <div class="card" aria-label="아이템 입력">
+      <h2>아이템 입력</h2>
+      <div id="items"></div>
+      <button class="btn-primary" onclick="addItem()">아이템 추가</button>
+    </div>
+
+    <div class="card" aria-label="참여자 입력">
+      <h2>참여자 입력</h2>
+      <div id="participants"></div>
+      <button class="btn-primary" onclick="addParticipant()">참여자 추가</button>
+      <button onclick="updateResults()">계산하기</button>
+      <div class="hint">* 인센티브는 총 판매금액에서 먼저 차감 후, 나머지를 분배합니다.</div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card" aria-label="분배 결과">
+      <h2>분배 결과</h2>
+      <div id="results"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// ===== Supabase 설정 (직접 교체 필요) =====
+const SUPABASE_URL = "https://yfgbodiqohgwidkbuhwj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmZ2JvZGlxb2hnd2lka2J1aHdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNDIzMTEsImV4cCI6MjA3ODgxODMxMX0.QI1fA8xWqalvjbl3XVKigO9sQiCP9Dh12bTZmSzyj2M";
+const ADMIN_EMAIL = "hgy0018@naver.com";
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let isAdmin = false;
+
+function setStatus(msg){
+  document.getElementById('status').textContent = msg;
+}
+function setRoleBadge(role){
+  const badge = document.getElementById('roleBadge');
+  const adminPanel = document.getElementById('adminPanel');
+  if(role === 'admin'){
+    badge.textContent = "관리자";
+    badge.classList.add('badge-admin');
+    adminPanel.classList.add('active');
+  }else if(role === 'user'){
+    badge.textContent = "일반 사용자";
+    badge.classList.remove('badge-admin');
+    adminPanel.classList.remove('active');
+  }else{
+    badge.textContent = "게스트";
+    badge.classList.remove('badge-admin');
+    adminPanel.classList.remove('active');
+  }
+}
+
+// ===== Auth =====
+async function signUp(){
+  const email = document.getElementById('email').value.trim();
+  const pw = document.getElementById('password').value;
+  if(!email || !pw){ alert("이메일과 비밀번호를 입력하세요."); return; }
+  const { error } = await supabase.auth.signUp({ email, password: pw });
+  if(error) alert(error.message); else alert("회원가입 완료 (메일 인증이 필요할 수 있습니다.)");
+}
+
+async function signIn(){
+  const emailVal = document.getElementById('email').value.trim();
+  const pw = document.getElementById('password').value;
+  const { data, error } = await supabase.auth.signInWithPassword({ email: emailVal, password: pw });
+  if(error){ alert(error.message); return; }
+  const user = data.user;
+  isAdmin = (user && user.email === ADMIN_EMAIL);
+  if(isAdmin){
+    setStatus("상태: 관리자 로그인 ("+user.email+")");
+    setRoleBadge('admin');
+  }else{
+    setStatus("상태: 일반 사용자 로그인 ("+user.email+")");
+    setRoleBadge('user');
+  }
+}
+
+async function signOut(){
+  await supabase.auth.signOut();
+  isAdmin = false;
+  setStatus("상태: 로그아웃됨");
+  setRoleBadge('guest');
+}
+
+// ===== 입력 유틸 =====
+function uid(){ return 'id_'+Math.random().toString(36).substr(2,9); }
+
+function addItemWithData(name, amount){
+  const nameId = uid(), amtId = uid();
+  const div = document.createElement('div');
+  div.className = "row-block";
+  div.innerHTML = `
+    <label for="${nameId}">아이템명</label>
+    <input id="${nameId}" type="text" value="${name || ""}">
+    <label for="${amtId}">금액</label>
+    <input id="${amtId}" type="number" value="${amount ?? 0}">
+    <button class="btn-danger" onclick="this.parentNode.remove();updateResults()">삭제</button>
+  `;
+  document.getElementById('items').appendChild(div);
+}
+
+function addItem(){
+  addItemWithData("", 0);
+}
+
+function addParticipantWithData(p){
+  const nameId=uid(), d1=uid(), d2=uid(), d3=uid(), extra=uid(), inc=uid();
+  const div=document.createElement('div');
+  div.className = "row-block";
+  div.innerHTML=`
+    <label for="${nameId}">이름</label>
+    <input id="${nameId}" type="text" value="${p?.name || ""}">
+
+    <label for="${d1}">1페</label>
+    <input id="${d1}" type="number" min="0" max="3" value="${p?.deaths?.[0] ?? 0}">
+
+    <label for="${d2}">2페</label>
+    <input id="${d2}" type="number" min="0" max="3" value="${p?.deaths?.[1] ?? 0}">
+
+    <label for="${d3}">3페</label>
+    <input id="${d3}" type="number" min="0" max="3" value="${p?.deaths?.[2] ?? 0}">
+
+    <label for="${extra}">추가차감</label>
+    <input id="${extra}" type="number" value="${p?.extra ?? 0}">
+
+    <label for="${inc}">인센티브</label>
+    <input id="${inc}" type="number" value="${p?.incentive ?? 0}">
+
+    <button class="btn-danger" onclick="this.parentNode.remove();updateResults()">삭제</button>
+  `;
+  document.getElementById('participants').appendChild(div);
+}
+
+function addParticipant(){
+  addParticipantWithData(null);
+}
+
+function getItems(){
+  const rows = document.querySelectorAll('#items > .row-block');
+  const arr = [];
+  rows.forEach(r=>{
+    const i = r.querySelectorAll('input');
+    if(i[0].value.trim()!==""){
+      arr.push({ name: i[0].value.trim(), amount: parseInt(i[1].value)||0 });
+    }
+  });
+  return arr;
+}
+
+function getParticipants(){
+  const rows=document.querySelectorAll('#participants > .row-block');
+  const arr=[];
+  rows.forEach(r=>{
+    const i=r.querySelectorAll('input');
+    if(i[0].value.trim()!==""){
+      arr.push({
+        name: i[0].value.trim(),
+        deaths: [parseInt(i[1].value)||0, parseInt(i[2].value)||0, parseInt(i[3].value)||0],
+        extra: parseInt(i[4].value)||0,
+        incentive: parseInt(i[5].value)||0
+      });
+    }
+  });
+  return arr;
+}
+
+// ===== 계산 로직 =====
+function calculateShares(total, players){
+  const totalInc = players.reduce((s,p)=>s+p.incentive,0);
+  const dist = total - totalInc;
+  const base = dist / players.length;
+  let totalDed = 0;
+  const tmp = [];
+  players.forEach(p=>{
+    let pen = 1 - 0.3*p.deaths[0] - 0.3*p.deaths[1] - 0.2*p.deaths[2] - 0.1*p.extra;
+    if(pen < 0) pen = 0;
+    let share = base * pen;
+    let ded = base - share;
+    totalDed += ded;
+    tmp.push({ ...p, base, pen, share, ded });
+  });
+  const zero = tmp.filter(x=>x.ded === 0);
+  const bonus = zero.length ? totalDed / zero.length : 0;
+  return tmp.map(x => ({
+    ...x,
+    bonus: (x.ded === 0 ? bonus : 0),
+    final: x.share + (x.ded === 0 ? bonus : 0) + x.incentive
+  }));
+}
+
+function updateResults(){
+  const items = getItems();
+  const players = getParticipants();
+  const res = document.getElementById('results');
+  if(items.length===0 || players.length===0){
+    res.innerHTML = "아이템과 참여자를 입력하세요.";
+    return;
+  }
+  const total = items.reduce((s,i)=>s+i.amount,0);
+  const calc = calculateShares(total, players);
+  const totalInc = players.reduce((s,p)=>s+p.incentive,0);
+  const dist = total - totalInc;
+  const totalShare = calc.reduce((s,p)=>s+p.final,0);
+  const totalDed = calc.reduce((s,p)=>s+p.ded,0);
+  const totalBonus = calc.reduce((s,p)=>s+p.bonus,0);
+
+  let html = `<div class="item-list"><strong>아이템별 금액:</strong><br>`;
+  items.forEach(i=>{
+    if(i.amount < 0){
+      html += `<span class="amt-neg">- ${i.name} ${Math.abs(i.amount).toLocaleString()}</span><br>`;
+    }else{
+      html += `<span class="amt-pos">+ ${i.name} ${i.amount.toLocaleString()}</span><br>`;
+    }
+  });
+  html += `</div>`;
+
+  html += `<p>총 판매금액: ${total.toLocaleString()}</p>`;
+  html += `<p>총 인센티브: ${totalInc.toLocaleString()}</p>`;
+  html += `<p>분배가능 금액(판매금액 - 인센티브): ${dist.toLocaleString()}</p>`;
+  html += `<p>총 차감액: ${Math.round(totalDed).toLocaleString()}</p>`;
+  html += `<p>총 보너스 지급액: ${Math.round(totalBonus).toLocaleString()}</p>`;
+
+  html += `<table>
+    <tr>
+      <th>이름</th>
+      <th>기본분배</th>
+      <th>차감율</th>
+      <th>차감액</th>
+      <th>보너스</th>
+      <th>인센티브</th>
+      <th>최종분배</th>
+    </tr>`;
+  calc.forEach(p=>{
+    html += `<tr>
+      <td>${p.name}</td>
+      <td>${Math.round(p.base).toLocaleString()}</td>
+      <td>${((1-p.pen)*100).toFixed(1)}%</td>
+      <td class="amt-neg">${Math.round(p.ded).toLocaleString()}</td>
+      <td>${Math.round(p.bonus).toLocaleString()}</td>
+      <td>${Math.round(p.incentive).toLocaleString()}</td>
+      <td>${Math.round(p.final).toLocaleString()}</td>
+    </tr>`;
+  });
+  html += `</table>`;
+  html += `<p>총 분배액(인센티브 포함): ${Math.round(totalShare).toLocaleString()}</p>`;
+
+  res.innerHTML = html;
+}
+
+// ===== Supabase 저장/불러오기 (관리자용) =====
+async function saveSession(){
+  if(!isAdmin){ alert("관리자만 저장할 수 있습니다."); return; }
+  const id = document.getElementById('sessionId').value.trim() || "default";
+  const items = getItems();
+  const participants = getParticipants();
+  const { error } = await supabase.from("tabs").upsert({
+    id,
+    items: JSON.stringify(items),
+    participants: JSON.stringify(participants),
+    updated_at: new Date().toISOString()
+  });
+  if(error) alert(error.message); else{ alert("저장 완료 ("+id+")"); loadSessionList(); }
+}
+
+async function loadSession(){
+  const id = document.getElementById('sessionId').value.trim() || "default";
+  const { data, error } = await supabase.from("tabs").select("*").eq("id", id).single();
+  if(error){ alert(error.message); return; }
+  applySessionData(data);
+}
+
+function applySessionData(row){
+  document.getElementById('items').innerHTML = "";
+  document.getElementById('participants').innerHTML = "";
+  const items = JSON.parse(row.items || "[]");
+  const participants = JSON.parse(row.participants || "[]");
+  items.forEach(i => addItemWithData(i.name, i.amount));
+  participants.forEach(p => addParticipantWithData(p));
+  updateResults();
+}
+
+async function loadSessionList(){
+  if(!isAdmin){ return; }
+  const { data, error } = await supabase.from("tabs").select("id, updated_at").order("updated_at", { ascending:false }).limit(50);
+  if(error){ console.error(error); return; }
+  const ul = document.getElementById('sessionList');
+  ul.innerHTML = "";
+  data.forEach(row=>{
+    const li = document.createElement('li');
+    const dt = row.updated_at ? new Date(row.updated_at) : null;
+    li.innerHTML = `<span>${row.id}</span><time>${dt ? dt.toLocaleString("ko-KR") : ""}</time>`;
+    li.onclick = ()=>{
+      document.getElementById('sessionId').value = row.id;
+      loadSession();
+    };
+    ul.appendChild(li);
+  });
+}
+
+// 초기 진입 시 기본 한 줄씩 만들어주기
+window.addEventListener('load', ()=>{
+  addItem();
+  addParticipant();
+});
+</script>
+</body>
+</html>
